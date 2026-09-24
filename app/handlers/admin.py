@@ -116,6 +116,8 @@ def handle_rebase(message):
         chat_id=chat_id,
         message_id=reply.message_id,
     )
+    delete_after(bot, chat_id, message.message_id, 0)
+    delete_after(bot, chat_id, reply.message_id, 30)
 
 
 @bot.message_handler(commands=['deleteall'])
@@ -168,6 +170,8 @@ def handle_deleteall(message):
             chat_id=chat_id,
             message_id=reply.message_id,
         )
+        delete_after(bot, chat_id, message.message_id, 0)
+        delete_after(bot, chat_id, reply.message_id, 30)
     except Exception as e:
         logger.critical(
             f"[INCONSISTENCY] DB wipe failed after all Telegram deletes completed. "
@@ -178,6 +182,8 @@ def handle_deleteall(message):
             chat_id=chat_id,
             message_id=reply.message_id,
         )
+        delete_after(bot, chat_id, message.message_id, 0)
+        delete_after(bot, chat_id, reply.message_id, 30)
 
 
 @bot.message_handler(commands=['delete'])

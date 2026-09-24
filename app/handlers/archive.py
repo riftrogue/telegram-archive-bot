@@ -1,7 +1,7 @@
 import time
 import logging
 import guessit
-
+import threading
 from app.core.bot import bot
 from app.config import MOVIE_GROUP_ID
 from app.core.database import add_movie, movie_exists, get_movie_by_message_id, update_movie
@@ -12,12 +12,14 @@ from app.utils.core_utils import delete_after, db_retry
 
 logger = logging.getLogger(__name__)
 
+_upload_lock = threading.Lock()
 
 def upload(message):
-    if message.chat.id != MOVIE_GROUP_ID:
-        return
+    with _upload_lock:
+        if message.chat.id != MOVIE_GROUP_ID:
+            return
 
-    media = message.document or message.video
+        media = message.document or message.video
     if not media:
         return
         
