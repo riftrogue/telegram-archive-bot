@@ -31,22 +31,29 @@ LANGUAGE_MAP = {
 }
 
 
+_active_domain = "api.themoviedb.org"
+
 def _fetch_tmdb(endpoint: str, params: dict = None):
+    global _active_domain
     if params is None:
         params = {}
     params["api_key"] = TMDB_API_KEY
     
-    url = f"https://api.themoviedb.org/3{endpoint}"
+    url = f"https://{_active_domain}/3{endpoint}"
     try:
         response = _session.get(url, params=params, timeout=10)
         response.raise_for_status()
         return response.json()
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-        logger.warning(f"Connection to api.themoviedb.org failed, trying fallback api.tmdb.org...")
-        fallback_url = f"https://api.tmdb.org/3{endpoint}"
-        response = _session.get(fallback_url, params=params, timeout=10)
-        response.raise_for_status()
-        return response.json()
+        if _active_domain == "api.themoviedb.org":
+            logger.warning(f"Connection to api.themoviedb.org failed, switching to api.tmdb.org permanently for this session...")
+            _active_domain = "api.tmdb.org"
+            fallback_url = f"https://{_active_domain}/3{endpoint}"
+            response = _session.get(fallback_url, params=params, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        else:
+            raise
 
 
 def get_movie(imdb_id: str):

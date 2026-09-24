@@ -86,8 +86,15 @@ def upload(message):
             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
             stored_message_id = new_msg.message_id
         except Exception as e:
-            logger.warning(f"[!] copy_message failed (rate limit?): {e}")
-            time.sleep(2)
+            error_str = str(e).lower()
+            sleep_time = 2
+            import re
+            match = re.search(r"retry after (\d+)", error_str)
+            if match:
+                sleep_time = int(match.group(1)) + 1
+            
+            logger.warning(f"[!] copy_message failed (rate limit). Sleeping for {sleep_time}s... Error: {e}")
+            time.sleep(sleep_time)
             try:
                 new_msg = bot.copy_message(
                     chat_id=message.chat.id,
