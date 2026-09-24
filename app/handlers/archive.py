@@ -34,7 +34,7 @@ def upload(message):
                 chat_id=message.chat.id,
                 from_chat_id=message.chat.id,
                 message_id=message.message_id,
-                caption=f"{error_text}\n\n*Please reply or edit the caption with an IMDb link to fix it.*",
+                caption=f"{error_text}\n\n*Please reply or re-forward the file with an IMDb link to fix it.*",
                 parse_mode="Markdown"
             )
             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
