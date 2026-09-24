@@ -28,11 +28,23 @@ def upload(message):
     if file_name:
         file_languages = extract_file_languages(file_name)
 
+    def _handle_upload_error(message, error_text):
+        try:
+            bot.copy_message(
+                chat_id=message.chat.id,
+                from_chat_id=message.chat.id,
+                message_id=message.message_id,
+                caption=f"{error_text}\n\n*Please reply or edit the caption with an IMDb link to fix it.*",
+                parse_mode="Markdown"
+            )
+            bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+        except Exception as e:
+            logger.warning(f"[!] Failed to copy error video: {e}")
+
     imdb_id = extract_imdb(message.caption or "")
     if not imdb_id:
         if not file_name:
-            reply_msg = bot.reply_to(message, "❌ No IMDb ID found in caption, and this video has no filename to guess from. Please reply to this message with an IMDb link.")
-            delete_after(bot, message.chat.id, reply_msg.message_id, 15)
+            _handle_upload_error(message, "❌ No IMDb ID found in caption, and this video has no filename to guess from.")
             logger.info("[!] Upload failed: No IMDb ID and no filename.")
             return
             
@@ -42,8 +54,7 @@ def upload(message):
         g_year = guess.get("year")
         
         if not g_title:
-            reply_msg = bot.reply_to(message, f"❌ Could not extract a movie title from the filename '{file_name}'. Please reply to this message with an IMDb link.")
-            delete_after(bot, message.chat.id, reply_msg.message_id, 15)
+            _handle_upload_error(message, f"❌ Could not extract a movie title from the filename '{file_name}'.")
             logger.info(f"[!] guessit failed to extract title from {file_name}")
             return
             
@@ -51,8 +62,7 @@ def upload(message):
         imdb_id = search_tmdb_by_title(g_title, g_year)
         
         if not imdb_id:
-            reply_msg = bot.reply_to(message, f"❌ Searched TMDB for '{g_title}' but found no matching movies. Please reply to this message with an IMDb link.")
-            delete_after(bot, message.chat.id, reply_msg.message_id, 15)
+            _handle_upload_error(message, f"❌ Searched TMDB for '{g_title}' but found no matching movies.")
             logger.info(f"[!] TMDB search failed for '{g_title}' ({g_year})")
             return
 
@@ -148,7 +158,14 @@ def edit_movie(message):
 
     target_msg_id = message.reply_to_message.message_id
     movie_record = get_movie_by_message_id(target_msg_id)
+    
+    # If it's not in the DB, but they replied to a video/document, they are trying to fix a failed upload!
     if not movie_record:
+        replied = message.reply_to_message
+        if replied.document or replied.video:
+            # Inject the IMDb ID from their reply text into the failed video's caption and process it as a fresh upload
+            replied.caption = (replied.caption or "") + " " + message.text
+            upload(replied)
         return
 
     if movie_record[5] != new_imdb_id and movie_exists(new_imdb_id):
