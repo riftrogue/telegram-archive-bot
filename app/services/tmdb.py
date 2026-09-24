@@ -31,21 +31,31 @@ LANGUAGE_MAP = {
 }
 
 
+def _fetch_tmdb(endpoint: str, params: dict = None):
+    if params is None:
+        params = {}
+    params["api_key"] = TMDB_API_KEY
+    
+    url = f"https://api.themoviedb.org/3{endpoint}"
+    try:
+        response = _session.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        logger.warning(f"Connection to api.themoviedb.org failed, trying fallback api.tmdb.org...")
+        fallback_url = f"https://api.tmdb.org/3{endpoint}"
+        response = _session.get(fallback_url, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+
+
 def get_movie(imdb_id: str):
     """
     Look up a movie or TV show by IMDb ID using the TMDB API.
     Returns a dict with 'title', 'year', and 'language', or None on failure.
     """
-    url = (
-        f"https://api.themoviedb.org/3/find/{imdb_id}"
-        f"?external_source=imdb_id&api_key={TMDB_API_KEY}"
-    )
-
     try:
-        response = _session.get(url, timeout=10)
-        response.raise_for_status()
-
-        data = response.json()
+        data = _fetch_tmdb(f"/find/{imdb_id}", {"external_source": "imdb_id"})
         movies = data.get("movie_results", [])
         tv = data.get("tv_results", [])
 
@@ -86,15 +96,13 @@ def search_tmdb_by_title(title: str, year: int = None):
     Search TMDB for a movie by title (and optionally year).
     Returns the imdb_id if found, else None.
     """
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={title}"
+    params = {"query": title}
     if year:
-        url += f"&year={year}"
+        params["year"] = year
         
     try:
-        response = _session.get(url, timeout=10)
-        response.raise_for_status()
-        
-        results = response.json().get("results", [])
+        data = _fetch_tmdb("/search/movie", params)
+        results = data.get("results", [])
         if not results:
             return None
             
@@ -102,11 +110,8 @@ def search_tmdb_by_title(title: str, year: int = None):
         tmdb_id = results[0]["id"]
         
         # Fetch external IDs to get the IMDb ID
-        ext_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}/external_ids?api_key={TMDB_API_KEY}"
-        ext_response = _session.get(ext_url, timeout=10)
-        ext_response.raise_for_status()
-        
-        return ext_response.json().get("imdb_id")
+        ext_data = _fetch_tmdb(f"/movie/{tmdb_id}/external_ids")
+        return ext_data.get("imdb_id")
         
     except Exception as e:
         logger.warning(f"TMDB search failed for '{title}' ({year}): {e}")
