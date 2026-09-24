@@ -37,7 +37,7 @@ def get_movie(imdb_id: str):
     Returns a dict with 'title', 'year', and 'language', or None on failure.
     """
     url = (
-        f"https://api.tmdb.org/3/find/{imdb_id}"
+        f"https://api.themoviedb.org/3/find/{imdb_id}"
         f"?external_source=imdb_id&api_key={TMDB_API_KEY}"
     )
 
@@ -86,7 +86,7 @@ def search_tmdb_by_title(title: str, year: int = None):
     Search TMDB for a movie by title (and optionally year).
     Returns the imdb_id if found, else None.
     """
-    url = f"https://api.tmdb.org/3/search/movie?api_key={TMDB_API_KEY}&query={title}"
+    url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={title}"
     if year:
         url += f"&year={year}"
         
@@ -102,7 +102,7 @@ def search_tmdb_by_title(title: str, year: int = None):
         tmdb_id = results[0]["id"]
         
         # Fetch external IDs to get the IMDb ID
-        ext_url = f"https://api.tmdb.org/3/movie/{tmdb_id}/external_ids?api_key={TMDB_API_KEY}"
+        ext_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}/external_ids?api_key={TMDB_API_KEY}"
         ext_response = _session.get(ext_url, timeout=10)
         ext_response.raise_for_status()
         
