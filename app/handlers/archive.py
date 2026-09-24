@@ -31,6 +31,9 @@ def upload(message):
     imdb_id = extract_imdb(message.caption or "")
     if not imdb_id:
         if not file_name:
+            reply_msg = bot.reply_to(message, "❌ No IMDb ID found in caption, and this video has no filename to guess from. Please reply to this message with an IMDb link.")
+            delete_after(bot, message.chat.id, reply_msg.message_id, 15)
+            logger.info("[!] Upload failed: No IMDb ID and no filename.")
             return
             
         logger.info(f"[*] No IMDb ID in caption. Guessing from filename: {file_name}")
@@ -39,6 +42,8 @@ def upload(message):
         g_year = guess.get("year")
         
         if not g_title:
+            reply_msg = bot.reply_to(message, f"❌ Could not extract a movie title from the filename '{file_name}'. Please reply to this message with an IMDb link.")
+            delete_after(bot, message.chat.id, reply_msg.message_id, 15)
             logger.info(f"[!] guessit failed to extract title from {file_name}")
             return
             
@@ -46,6 +51,8 @@ def upload(message):
         imdb_id = search_tmdb_by_title(g_title, g_year)
         
         if not imdb_id:
+            reply_msg = bot.reply_to(message, f"❌ Searched TMDB for '{g_title}' but found no matching movies. Please reply to this message with an IMDb link.")
+            delete_after(bot, message.chat.id, reply_msg.message_id, 15)
             logger.info(f"[!] TMDB search failed for '{g_title}' ({g_year})")
             return
 
@@ -71,13 +78,24 @@ def upload(message):
     caption = build_caption(title, alternate_title, year, original_language, file_languages, imdb_id)
 
     try:
-        bot.edit_message_caption(
+        new_msg = bot.copy_message(
             chat_id=message.chat.id,
+            from_chat_id=message.chat.id,
             message_id=message.message_id,
             caption=caption,
         )
-        stored_message_id = message.message_id
-    except Exception:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+        stored_message_id = new_msg.message_id
+    except Exception as e:
+        error_str = str(e).lower()
+        sleep_time = 2
+        import re
+        match = re.search(r"retry after (\d+)", error_str)
+        if match:
+            sleep_time = int(match.group(1)) + 1
+        
+        logger.warning(f"[!] copy_message failed (rate limit). Sleeping for {sleep_time}s... Error: {e}")
+        time.sleep(sleep_time)
         try:
             new_msg = bot.copy_message(
                 chat_id=message.chat.id,
@@ -87,28 +105,9 @@ def upload(message):
             )
             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
             stored_message_id = new_msg.message_id
-        except Exception as e:
-            error_str = str(e).lower()
-            sleep_time = 2
-            import re
-            match = re.search(r"retry after (\d+)", error_str)
-            if match:
-                sleep_time = int(match.group(1)) + 1
-            
-            logger.warning(f"[!] copy_message failed (rate limit). Sleeping for {sleep_time}s... Error: {e}")
-            time.sleep(sleep_time)
-            try:
-                new_msg = bot.copy_message(
-                    chat_id=message.chat.id,
-                    from_chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    caption=caption,
-                )
-                bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-                stored_message_id = new_msg.message_id
-            except Exception as e2:
-                logger.warning(f"[!] copy_message failed again: {e2}")
-                stored_message_id = message.message_id
+        except Exception as e2:
+            logger.warning(f"[!] copy_message failed again: {e2}")
+            stored_message_id = message.message_id
 
     try:
         db_retry(
