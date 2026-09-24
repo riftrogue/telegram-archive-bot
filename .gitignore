@@ -34,3 +34,6 @@ share/python-wheels/
 *.swp
 *.swo
 .DS_Store
+
+# Logs
+*.log

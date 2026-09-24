@@ -1,48 +1,8 @@
-import re
 import time
 import logging
 import threading
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# IMDb ID extraction
-# ---------------------------------------------------------------------------
-
-IMDB_RE = re.compile(r"(tt\d+)")
-
-
-def extract_imdb(text: str):
-    """Return the first IMDb ID found in text, or None."""
-    if not text:
-        return None
-    match = IMDB_RE.search(text)
-    return match.group(1) if match else None
-
-
-# ---------------------------------------------------------------------------
-# Caption builder
-# ---------------------------------------------------------------------------
-
-def build_caption(title, year, language, imdb_id: str) -> str:
-    """
-    Build the standard movie caption used everywhere in the bot.
-
-    If title and year are available, includes them along with optional language.
-    Falls back to just the IMDb URL if metadata is missing.
-    """
-    if title and year:
-        lines = [
-            f"title: {title}",
-            f"year: {year}",
-        ]
-        if language:
-            lines.append(f"language: {language}")
-        lines.append(f"imdb: https://www.imdb.com/title/{imdb_id}/")
-        return "\n".join(lines)
-
-    return f"imdb: https://www.imdb.com/title/{imdb_id}/"
-
 
 # ---------------------------------------------------------------------------
 # Delayed message deletion

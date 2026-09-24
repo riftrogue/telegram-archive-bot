@@ -1,6 +1,6 @@
 import logging
 from supabase import create_client
-from config import SUPABASE_URL, SUPABASE_KEY
+from app.config import SUPABASE_URL, SUPABASE_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def init_db():
 # Write operations
 # ---------------------------------------------------------------------------
 
-def add_movie(chat_id, message_id, file_unique_id, file_name, title, year, imdb_id, language=None):
+def add_movie(chat_id, message_id, file_unique_id, file_name, title, alternate_title, year, imdb_id, original_language=None, file_languages=None):
     """
     Insert a new movie record. If a record with the same imdb_id already
     exists (e.g. after a crash + retry), update it instead of failing.
@@ -35,19 +35,23 @@ def add_movie(chat_id, message_id, file_unique_id, file_name, title, year, imdb_
         "file_unique_id": file_unique_id,
         "file_name": file_name,
         "title": title,
+        "alternate_title": alternate_title,
         "year": year,
         "imdb_id": imdb_id,
-        "language": language,
+        "original_language": original_language,
+        "file_languages": file_languages,
     }
     _client.table("movies").upsert(data, on_conflict="imdb_id").execute()
 
 
-def update_movie(message_id, title, year, new_imdb_id, language=None):
+def update_movie(message_id, title, alternate_title, year, new_imdb_id, original_language=None, file_languages=None):
     data = {
         "title": title,
+        "alternate_title": alternate_title,
         "year": year,
         "imdb_id": new_imdb_id,
-        "language": language,
+        "original_language": original_language,
+        "file_languages": file_languages,
     }
     _client.table("movies").update(data).eq("message_id", message_id).execute()
 
@@ -80,7 +84,7 @@ def search_movie(query):
     if query.startswith("tt"):
         response = (
             _client.table("movies")
-            .select("chat_id, message_id, title, year, imdb_id, language")
+            .select("chat_id, message_id, title, alternate_title, year, imdb_id, original_language, file_languages")
             .eq("imdb_id", query)
             .execute()
         )
@@ -91,7 +95,7 @@ def search_movie(query):
         year_part = int(query[-4:])
         response = (
             _client.table("movies")
-            .select("chat_id, message_id, title, year, imdb_id, language")
+            .select("chat_id, message_id, title, alternate_title, year, imdb_id, original_language, file_languages")
             .ilike("title", f"%{title_part}%")
             .eq("year", year_part)
             .execute()
@@ -101,7 +105,7 @@ def search_movie(query):
     else:
         response = (
             _client.table("movies")
-            .select("chat_id, message_id, title, year, imdb_id, language")
+            .select("chat_id, message_id, title, alternate_title, year, imdb_id, original_language, file_languages")
             .ilike("title", f"%{query}%")
             .execute()
         )
@@ -112,9 +116,11 @@ def search_movie(query):
             record["chat_id"],
             record["message_id"],
             record.get("title"),
+            record.get("alternate_title"),
             record.get("year"),
             record["imdb_id"],
-            record.get("language"),
+            record.get("original_language"),
+            record.get("file_languages"),
         )
     return None
 
@@ -131,9 +137,11 @@ def get_movie_by_message_id(message_id):
             record["chat_id"],
             record["message_id"],
             record.get("title"),
+            record.get("alternate_title"),
             record.get("year"),
             record["imdb_id"],
-            record.get("language"),
+            record.get("original_language"),
+            record.get("file_languages"),
         )
     return None
 

@@ -1,5 +1,5 @@
 import telebot
-from config import BOT_TOKEN
+from app.config import BOT_TOKEN
 
 # Single TeleBot instance shared across all modules.
 # Import this wherever you need to call Telegram API methods.

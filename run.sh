@@ -9,7 +9,7 @@ fi
 echo "[*] Starting moviebot loop..."
 
 while true; do
-    python bot.py
+    python main.py
     EXIT_CODE=$?
     
     echo "[!] Bot crashed or stopped with exit code $EXIT_CODE."

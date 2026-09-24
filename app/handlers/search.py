@@ -1,9 +1,11 @@
 import logging
 import threading
 
-from bot_instance import bot
-from database import search_movie
-from utils import extract_imdb, build_caption, delete_after
+from app.core.bot import bot
+from app.core.database import search_movie
+from app.utils.extraction import extract_imdb
+from app.utils.formatting import build_caption
+from app.utils.core_utils import delete_after
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,13 @@ def _cleanup_search(chat_id, message_ids, delay):
     t.start()
 
 
+@bot.message_handler(
+    content_types=['text'],
+    func=lambda m: m.chat.id != __import__("app.config").config.MOVIE_GROUP_ID,
+)
+def handle_search(message):
+    search(message)
+
 def search(message):
     if not message.text:
         return
@@ -57,8 +66,8 @@ def search(message):
         delete_after(bot, chat_id, reply_msg.message_id, 60)
         return
 
-    chat_id_src, message_id, title, year, imdb_id, language = movie
-    caption = build_caption(title, year, language, imdb_id)
+    chat_id_src, message_id, title, alternate_title, year, imdb_id, original_language, file_languages = movie
+    caption = build_caption(title, alternate_title, year, original_language, file_languages, imdb_id)
 
     try:
         vid_msg = bot.copy_message(
