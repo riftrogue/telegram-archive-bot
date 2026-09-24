@@ -56,8 +56,8 @@ def get_movie(imdb_id: str):
             tmdb_original = movie.get("original_title") or tmdb_title
             
             return {
-                "title": tmdb_original,
-                "alternate_title": tmdb_title if tmdb_title != tmdb_original else None,
+                "title": tmdb_title,
+                "alternate_title": tmdb_original if tmdb_original != tmdb_title else None,
                 "year": int(movie["release_date"][:4]) if movie.get("release_date") else None,
                 "original_language": LANGUAGE_MAP.get(lang_code, lang_code.upper() if lang_code else None),
             }
@@ -68,8 +68,8 @@ def get_movie(imdb_id: str):
             tmdb_original = show.get("original_name") or tmdb_title
             
             return {
-                "title": tmdb_original,
-                "alternate_title": tmdb_title if tmdb_title != tmdb_original else None,
+                "title": tmdb_title,
+                "alternate_title": tmdb_original if tmdb_original != tmdb_title else None,
                 "year": int(show["first_air_date"][:4]) if show.get("first_air_date") else None,
                 "original_language": LANGUAGE_MAP.get(lang_code, lang_code.upper() if lang_code else None),
             }
